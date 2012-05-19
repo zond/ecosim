@@ -7,16 +7,22 @@ import (
 )
 
 type Engine struct {
-	Actors map[Actor]bool
-	Market *gomarket.Market
+	actors map[Actor]bool
+	market *gomarket.Market
 }
 func NewEngine() *Engine {
 	return &Engine{make(map[Actor]bool), gomarket.NewMarket()}
 }
+func (e *Engine) Add(a Actor) {
+	e.actors[a] = true
+}
+func (e *Engine) Del(a Actor) {
+	delete(e.actors, a)
+}
 func (e *Engine) Profit(amounts map[gomarket.Resource]float64) float64 {
 	return_value := 0.0
 	for resource, units := range amounts {
-		if price, ok := e.Market.Prices[resource]; ok {
+		if price, ok := e.market.Price(resource); ok {
 			return_value = return_value + price * units
 		} else {
 			return_value = return_value + units
@@ -25,7 +31,7 @@ func (e *Engine) Profit(amounts map[gomarket.Resource]float64) float64 {
 	return return_value
 }
  func (e *Engine) Run(t time.Duration) {
-	for actor,_ := range e.Actors {
+	for actor,_ := range e.actors {
 		best_process, best_profit := Process(nil), 0.0
 		next_best_profit := 0.0
 		for _,process := range actor.Processes() {
@@ -41,7 +47,7 @@ func (e *Engine) Profit(amounts map[gomarket.Resource]float64) float64 {
 			best_process.Run(t)
 		}
 	}
-	e.Market.Trade()
+	e.market.Trade()
 }
 
 type Process interface {
