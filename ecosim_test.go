@@ -17,9 +17,8 @@ func NewTestProcess(projection map[gomarket.Resource]float64) *TestProcess {
 func (t *TestProcess) Project(ti time.Duration) map[gomarket.Resource]float64 {
 	return t.projection
 }
-func (t *TestProcess) Run(ti time.Duration) map[gomarket.Resource]float64 {
+func (t *TestProcess) Run(ti time.Duration) {
 	t.ran = true
-	return t.projection
 }
 
 type TestActor struct {
@@ -28,7 +27,16 @@ type TestActor struct {
 func (a *TestActor) Processes() []Process {
 	return a.processes
 }
-
+func (a *TestActor) Asks() map[*gomarket.Order]bool {
+	return nil
+}
+func (a *TestActor) Bids() map[*gomarket.Order]bool {
+	return nil
+}
+func (a *TestActor) Buy(bid, ask *gomarket.Order, price float64) {
+}
+func (a *TestActor) Deliver(bid, ask *gomarket.Order, price float64) {
+}
 
 func TestInitialRun(t *testing.T) {
 	e := NewEngine()

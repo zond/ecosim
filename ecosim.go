@@ -15,9 +15,11 @@ func NewEngine() *Engine {
 }
 func (e *Engine) Add(a Actor) {
 	e.actors[a] = true
+	e.market.Add(a)
 }
 func (e *Engine) Del(a Actor) {
 	delete(e.actors, a)
+	e.market.Del(a)
 }
 func (e *Engine) Profit(amounts map[gomarket.Resource]float64) float64 {
 	return_value := 0.0
@@ -52,10 +54,13 @@ func (e *Engine) Profit(amounts map[gomarket.Resource]float64) float64 {
 
 type Process interface {
 	Project(t time.Duration) map[gomarket.Resource]float64
-	Run(t time.Duration) map[gomarket.Resource]float64
+	Run(t time.Duration)
 }
-
 
 type Actor interface {
 	Processes() []Process
+	Asks() map[*gomarket.Order]bool
+	Bids() map[*gomarket.Order]bool
+	Buy(*gomarket.Order, *gomarket.Order, float64)
+	Deliver(*gomarket.Order, *gomarket.Order, float64)
 }
