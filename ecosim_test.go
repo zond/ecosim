@@ -21,28 +21,13 @@ func (t *TestProcess) Run(ti time.Duration) {
 	t.ran = true
 }
 
-type TestActor struct {
-	processes []Process
-}
-func (a *TestActor) Processes() []Process {
-	return a.processes
-}
-func (a *TestActor) Asks() map[*gomarket.Order]bool {
-	return nil
-}
-func (a *TestActor) Bids() map[*gomarket.Order]bool {
-	return nil
-}
-func (a *TestActor) Buy(bid, ask *gomarket.Order, price float64) {
-}
-func (a *TestActor) Deliver(bid, ask *gomarket.Order, price float64) {
-}
-
 func TestInitialRun(t *testing.T) {
 	e := NewEngine()
 	farming := NewTestProcess(map[gomarket.Resource]float64{"rice": 10.0, "tools": -1.0})
 	smithing := NewTestProcess(map[gomarket.Resource]float64{"tools": 3.0, "ore": -1.0})
-	actor1 := &TestActor{[]Process{farming, smithing}}
+	actor1 := NewStandardActor()
+	actor1.AddProcess(farming)
+	actor1.AddProcess(smithing)
 	e.Add(actor1)
 	e.Run(time.Second)
 	if !farming.ran {

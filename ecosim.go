@@ -57,10 +57,3 @@ type Process interface {
 	Run(t time.Duration)
 }
 
-type Actor interface {
-	Processes() []Process
-	Asks() map[*gomarket.Order]bool
-	Bids() map[*gomarket.Order]bool
-	Buy(*gomarket.Order, *gomarket.Order, float64)
-	Deliver(*gomarket.Order, *gomarket.Order, float64)
-}
