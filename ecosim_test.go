@@ -7,33 +7,40 @@ import (
 	"../gomarket"
 )
 
-type TestProcess struct {
-	projection map[gomarket.Resource]float64
-	ran bool
+type TestActor struct {
+	gomarket.Trader
+	ran map[Process]bool
+	processes []Process
 }
-func NewTestProcess(projection map[gomarket.Resource]float64) *TestProcess {
-	return &TestProcess{projection, false}
+func (t *TestActor) Buy(bid, ask *gomarket.Order, price float64) {
 }
-func (t *TestProcess) Project(ti time.Duration) map[gomarket.Resource]float64 {
-	return t.projection
+func (t *TestActor) Deliver(bid, ask *gomarket.Order, price float64) {
 }
-func (t *TestProcess) Run(ti time.Duration) {
-	t.ran = true
+func (t *TestActor) Processes() []Process {
+	return processes
 }
+func (t *TestActor) Update(process Process, t time.Duration) {
+	t.ran[process] = true
+}
+
 
 func TestInitialRun(t *testing.T) {
 	e := NewEngine()
-	farming := NewTestProcess(map[gomarket.Resource]float64{"rice": 10.0, "tools": -1.0})
-	smithing := NewTestProcess(map[gomarket.Resource]float64{"tools": 3.0, "ore": -1.0})
-	actor1 := NewStandardActor()
-	actor1.AddProcess(farming)
-	actor1.AddProcess(smithing)
+	actor1 := &TestActor{gomarket.NewStandardTrader(), make(map[Process]bool)}
+	farming := func(t time.Duration) map[gomarket.Resource]float64 {
+		return map[gomarket.Resoure]float64{"rice": 10.0, "tools": -1.0}
+	}
+	smithing := func(t time.Duration) map[gomarket.Resource]float64 {
+		return map[gomarket.Resoure]float64{"tools": 3.0, "ore": -1.0}
+	}
+	actor1.processes = append(actor1.processes, farming)
+	actor1.processes = append(actor1.processes, smithing)
 	e.Add(actor1)
 	e.Run(time.Second)
-	if !farming.ran {
+	if !actor1.ran[farming] {
 		t.Error("should have farmed")
 	}
-	if smithing.ran {
+	if actor1.ran[smithing] {
 		t.Error("should not have smithed")
 	}
 }
