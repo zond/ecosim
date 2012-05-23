@@ -21,24 +21,13 @@ func (e *Engine) Del(a Actor) {
 	delete(e.actors, a)
 	e.market.Del(a)
 }
-func (e *Engine) profit(output Output) {
-	return_value := 0.0
-	for resource, units := range output.output {
-		if price, ok := e.market.Price(resource); ok {
-			return_value = return_value + price * units * output.cycles
-		} else {
-			return_value = return_value + units * output.cycles
-		}
-	}
-	return return_value
-}
 func (e *Engine) Run(t time.Duration) {
 	for actor,_ := range e.actors {
-		best_process, best_profit, best_output := Process(nil), 0.0, Output(nil)
-		next_best_profit := 0.0
+		profitCalculator := NewProfitCalculator(e, actor, t)
+		best_profit := Profit(nil)
+		next_best_profit := Profit(nil)
 		for _,process := range actor.Processes() {
-			output := process.Run(t)
-			profit := e.Profit(output)
+			profit := profitCalculator.processProfit(process, t)
 			if profit > best_profit {
 				next_best_profit = best_profit
 				best_process, best_profit, best_output = process, profit, output
@@ -53,35 +42,70 @@ func (e *Engine) Run(t time.Duration) {
 	e.market.Trade()
 }
 
-type Update struct {
-	Output Output
-	time time.Duration
-	opportunityCost float64
+
+/*
+ * The immediate and eventual output of a process.
+ * Eventual output is defined as actual output + the fraction of not-yet-produced output for the next cycle.
+ */
+type Output struct {
+	Process *Process
+	Immediate Resources
+	Eventual Resources
+}
+func (o *Output) MergeIn(other *Output) {
+	o.Immediate.MergeIn(other.Immediate)
+	o.Eventual.MergeIn(other.Eventual)
+}
+func (o *Output) Profit(market *Market) {
+	return &Profit{o, market.Value(o.Immediate), market.Value(o.Eventual)}
 }
 
-type Output struct {
-	Actual map[Resource]float64
-	Potential map[Resource]float64
+type Update struct {
+	Profit *profit
+	Time time.Duration
+}
+
+/*
+ * The Output of a process along with its immedate and eventual profit (or, the avoidance costs along with their loss)
+ */
+type Profit struct {
+	output *Output
+	Immediate float64
+	Eventual float64
+}
+func (p *Profit) MergeIn(o *Profit) {
+	p.output.MergeIn(o.output)
+	p.Immediate += o.Immediate
+	p.Eventual += p.Eventual
 }
 
 type Process interface {
-	Run(time.Duration) Output
+	/*
+	 * The results when running this process for a time.
+	 */
+	Run(time.Duration) *Output
+	/*
+	 * The results when avoiding this process for a time.
+	 */
+	Avoid(time.Duration) *Output
 }
 
 type Actor interface {
 	Trader
 	Carrier
 	Processes() []Process
-	Update(Update)
+	Update(*Update)
 }
 
 type Skill interface{}
 
+type Skills map[Skill]float64
+
 type StandardActor struct {
 	StandardTrader
 	processes []Process
-	skills map[Skill]float64
-	resources map[Resource]float64
+	skills Skills
+	resources Resources
 }
 func (s *StandardActor) AddProcess(factory *StandardProcessFactory) {
 	s.processes = append(s.processes, factory.produce(s))
@@ -89,6 +113,6 @@ func (s *StandardActor) AddProcess(factory *StandardProcessFactory) {
 func (s *StandardActor) Processes() []Process {
 	return s.processes
 }
-func (s *StandardActor) Update(update Update) {
+func (s *StandardActor) Update(update *Update) {
 	fmt.Println(s,"updated with",update)
 }

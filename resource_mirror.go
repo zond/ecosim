@@ -7,11 +7,11 @@ import (
 )
 
 type ResourceMirror struct {
-	original map[Resource]float64
-	delta map[Resource]float64
+	original Resources
+	delta Resources
 }
-func NewResourceMirror(original map[Resource]float64) {
-	return &ResourceMirror{original, make(map[Resource]float64)}
+func NewResourceMirror(original Resources) {
+	return &ResourceMirror{original, make(Resources)}
 }
 func (r *ResourceMirror) Left(resource Resource) {
 	return math.Max(0.0, r.original[resource] + r.delta[resource])
@@ -25,6 +25,6 @@ func (r *ResourceMirror) Consume(resource Resource, units float64) float64 {
 	r.delta[resource] = r.delta[resource] - returnValue
 	return returnValue
 }
-func (r *ResourceMirror) Delta() map[Resource]float64 {
+func (r *ResourceMirror) Delta() Resources {
 	return delta
 }

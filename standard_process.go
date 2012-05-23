@@ -54,21 +54,27 @@ func (r *Requirement) Apply(available float64, factor float64) Usage {
  * The effect of the used resources is multiplied 
  */
 type StandardProcessFactory struct {
-	requiredSkills map[Skill]Requirement
-	usefulSkills map[Skill]Requirement
-	requiredResources map[Resource]Requirement
-	usefulResources map[Resource]Requirement
-	standardOutput map[Resource]float64
+	requiredSkills map[Skill]*Requirement
+	usefulSkills map[Skill]*Requirement
+	requiredResources map[Resource]*Requirement
+	usefulResources map[Resource]*Requirement
+	standardOutput Resources
 	requiredTime time.Duration
+	avoidance *StandardProcessFactory
 }
 func (s *StandardProcessFactory) produce(a *StandardActor) *StandardProcess {
-	return &StandardProcess{s, a, 0.0}
+	process := &StandardProcess{s, a, 0.0, Process(nil)}
+	if s.avoidance != nil {
+		process.avoidance = s.avoidance.produce(a)
+	}
+	return process
 }
 
 type StandardProcess struct {
 	*StandardProcessFactory
 	actor *StandardActor
 	progress float64
+	avoidance Process
 }
 /*
  * Calculate the effect of the skills of our actor.
@@ -145,7 +151,10 @@ func (s *StandardProcess) resources(mirror *ResourceMirror, skillFactor float64)
 		return result
 	}
 }
-func (s *StandardProcess) Run(t time.Duration) Output {
+func (s *StandardProcess) Avoid(t time.Duration) *Output {
+	return s.avoidance.Run(t)
+}
+func (s *StandardProcess) Run(t time.Duration) *Output {
 	/*
 	 * How skilled is the actor? Will affect both costs and cycle length.
 	 */
