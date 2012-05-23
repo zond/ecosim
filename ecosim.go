@@ -29,10 +29,10 @@ func (e *Engine) Run(t time.Duration) {
 		next_best_profit := (*Profit)(nil)
 		for _,process := range actor.Processes() {
 			profit := profitCalculator.processProfit(process)
-			if profit.Eventual > best_profit.Eventual {
+			if best_profit == nil || profit.Eventual > best_profit.Eventual {
 				next_best_profit = best_profit
 				best_profit = profit
-			} else if profit.Eventual > next_best_profit.Eventual {
+			} else if next_best_profit == nil || profit.Eventual > next_best_profit.Eventual {
 				next_best_profit = profit
 			}
 		}
@@ -69,12 +69,12 @@ type Update struct {
  * The Output of a process along with its immedate and eventual profit (or, the avoidance costs along with their loss)
  */
 type Profit struct {
-	output *Output
+	Output *Output
 	Immediate float64
 	Eventual float64
 }
 func (p *Profit) MergeIn(o *Profit) {
-	p.output.MergeIn(o.output)
+	p.Output.MergeIn(o.Output)
 	p.Immediate += o.Immediate
 	p.Eventual += p.Eventual
 }

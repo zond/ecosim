@@ -34,7 +34,7 @@ func NewProfitCalculator(market *Market, actor Actor, t time.Duration) *ProfitCa
  * the given process.
  */
 func (e *ProfitCalculator) processProfit(process Process) *Profit {
-	if cost, ok := e.avoidanceCosts[process]; ok {
+	if _, ok := e.avoidanceCosts[process]; ok {
 		profit := process.Run(e.time).Profit(e.market)
 		for avoidedProcess, cost := range e.avoidanceCosts {
 			if process != avoidedProcess {
@@ -45,4 +45,5 @@ func (e *ProfitCalculator) processProfit(process Process) *Profit {
 	} else {
 		panic(fmt.Sprint(process,"is not in",e.avoidanceCosts))
 	}
+	return (*Profit)(nil)
 }
