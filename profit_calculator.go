@@ -3,6 +3,7 @@ package ecosim
 
 import (
 	"time"
+	"fmt"
 	. "../gomarket"
 )
 
@@ -11,7 +12,7 @@ import (
  */
 type ProfitCalculator struct {
 	market *Market
-	avoidanceCosts map[Process]Profit
+	avoidanceCosts map[Process]*Profit
 	time time.Duration
 }
 /*
@@ -20,7 +21,7 @@ type ProfitCalculator struct {
  * by NOT doing them.
  */
 func NewProfitCalculator(market *Market, actor Actor, t time.Duration) *ProfitCalculator {
-	calculator := &ProfitCalculator{market, make(map[Process]Output), t}
+	calculator := &ProfitCalculator{market, make(map[Process]*Profit), t}
 	for _,process := range actor.Processes() {
 		calculator.avoidanceCosts[process] = process.Avoid(t).Profit(market)
 	}
@@ -42,6 +43,6 @@ func (e *ProfitCalculator) processProfit(process Process) *Profit {
 		}
 		return profit
 	} else {
-		panic(fmt.Sprint(process,"is not in",avoidanceCosts))
+		panic(fmt.Sprint(process,"is not in",e.avoidanceCosts))
 	}
 }

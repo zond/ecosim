@@ -35,9 +35,9 @@ func (r *Requirement) used(available float64) float64 {
  * Apply this requirement to an amount of available resource.
  * Will (for this calculation only) modify the norm with the given factor.
  */
-func (r *Requirement) Apply(available float64, factor float64) Usage {
+func (r *Requirement) Apply(available float64, factor float64) *Usage {
 	amount := r.used(available)
-	effect := r.impact * (used / (r.norm * factor))
+	effect := amount / (r.norm * factor)
 	return &Usage{effect, amount}
 }
 
@@ -73,7 +73,7 @@ func (s *StandardProcessFactory) produce(a *StandardActor) *StandardProcess {
 type StandardProcess struct {
 	*StandardProcessFactory
 	actor *StandardActor
-	progress float64
+	progress time.Duration
 	avoidance Process
 }
 /*
@@ -124,14 +124,14 @@ func (s *StandardProcess) consume(mirror *ResourceMirror, costFactor float64) fl
  * Append the output of this process to the given mirror
  */
 func (s *StandardProcess) appendOutput(productionFactor float64, mirror *ResourceMirror) {
-	for resource, units := range s.output {
+	for resource, units := range s.standardOutput {
 		mirror.Produce(resource, productionFactor * units)
 	}
 }
 /*
-* Append the costs and production of one cycle to the mirror, taking a skill factor into account.
+ * Append the costs and production of a fragment of a cycle to the mirror, taking a skill factor into account.
  */
-func (s *StandardProcess) resources(mirror *ResourceMirror, skillFactor float64) {
+func (s *StandardProcess) cycle(mirror *ResourceMirror, skillFactor float64, fragment float64) {
 	/*
 	 * The cost is ameliorated by the square root of the skill.
 	 */
@@ -139,16 +139,15 @@ func (s *StandardProcess) resources(mirror *ResourceMirror, skillFactor float64)
 	/*
 	 * How much does lack of resources hinder production?
 	 */
-	resourceFactor := s.consume(mirror, costFactor)
+	resourceFactor := s.consume(mirror, costFactor * fragment)
 	if resourceFactor > 0.0 {
 		/*
 		 * What we actually produce is proportional to how competent we are
 		 * and any lack of resources.
 		 */
-		actualProduction := skillFactor * resourceFactor
+		actualProduction := skillFactor * resourceFactor * fragment
 		
 		s.appendOutput(actualProduction, mirror)
-		return result
 	}
 }
 func (s *StandardProcess) Avoid(t time.Duration) *Output {
@@ -162,26 +161,32 @@ func (s *StandardProcess) Run(t time.Duration) *Output {
 	/*
 	 * How long will our cycle be, based on our skill?
 	 */
-	cycleLength := s.requiredTime / skillFactor;
+	cycleLength := time.Duration(float64(s.requiredTime) / skillFactor);
 	/*
 	 * How many cycles are contained within (time spent on unfinished cycle so far + t)?
 	 */
-	cycles := (s.progress + t) / cycleLength
+	cycles := float64(s.progress + t) / float64(cycleLength)
 	/*
 	 * Make a mirror of our resources for this experiment.
 	 */
-	mirror := NewResourceMirror(s.actor.resources)
+	immediate := NewResourceMirror(s.actor.resources)
 	/*
 	 * Iterate int64(cycles) times to see how much we will produce during t.
 	 */
-	
+	cyclesDone := 1.0
+	for ; cyclesDone < cycles; cyclesDone++ {
+		s.cycle(immediate, skillFactor, 1)
+	}
 	/*
 	 * Iterate one more time to see how much we would have produced if we had one more cycle to go,
 	 * Then multiply that with the fraction of a cycle that we managed to finish to calculate the
 	 * eventual results.
 	 */
-
+	eventual := immediate.Clone()
+	if cyclesDone > cycles {
+		s.cycle(eventual, skillFactor, cyclesDone - cycles)
+	}
 	
-	return &Output{...}
+	return &Output{s, immediate.Delta(), eventual.Delta()}
 }
 

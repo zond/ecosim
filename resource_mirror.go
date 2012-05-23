@@ -10,10 +10,13 @@ type ResourceMirror struct {
 	original Resources
 	delta Resources
 }
-func NewResourceMirror(original Resources) {
+func NewResourceMirror(original Resources) *ResourceMirror {
 	return &ResourceMirror{original, make(Resources)}
 }
-func (r *ResourceMirror) Left(resource Resource) {
+func (r *ResourceMirror) Clone() *ResourceMirror {
+	return &ResourceMirror{r.original, r.delta.Clone()}
+}
+func (r *ResourceMirror) Left(resource Resource) float64 {
 	return math.Max(0.0, r.original[resource] + r.delta[resource])
 }
 func (r *ResourceMirror) Produce(resource Resource, units float64) {
@@ -26,5 +29,5 @@ func (r *ResourceMirror) Consume(resource Resource, units float64) float64 {
 	return returnValue
 }
 func (r *ResourceMirror) Delta() Resources {
-	return delta
+	return r.delta
 }

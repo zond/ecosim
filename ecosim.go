@@ -3,6 +3,7 @@ package ecosim
 
 import (
 	"time"
+	"fmt"
 	. "../gomarket"
 )
 
@@ -23,21 +24,19 @@ func (e *Engine) Del(a Actor) {
 }
 func (e *Engine) Run(t time.Duration) {
 	for actor,_ := range e.actors {
-		profitCalculator := NewProfitCalculator(e, actor, t)
-		best_profit := Profit(nil)
-		next_best_profit := Profit(nil)
+		profitCalculator := NewProfitCalculator(e.market, actor, t)
+		best_profit := (*Profit)(nil)
+		next_best_profit := (*Profit)(nil)
 		for _,process := range actor.Processes() {
-			profit := profitCalculator.processProfit(process, t)
-			if profit > best_profit {
+			profit := profitCalculator.processProfit(process)
+			if profit.Eventual > best_profit.Eventual {
 				next_best_profit = best_profit
-				best_process, best_profit, best_output = process, profit, output
-			} else if profit > next_best_profit {
+				best_profit = profit
+			} else if profit.Eventual > next_best_profit.Eventual {
 				next_best_profit = profit
 			}
 		}
-		if best_output != nil {
-			actor.Update(&Update{best_output, t, next_best_profit})
-		}
+		actor.Update(&Update{best_profit, next_best_profit, t})
 	}
 	e.market.Trade()
 }
@@ -48,7 +47,7 @@ func (e *Engine) Run(t time.Duration) {
  * Eventual output is defined as actual output + the fraction of not-yet-produced output for the next cycle.
  */
 type Output struct {
-	Process *Process
+	Process Process
 	Immediate Resources
 	Eventual Resources
 }
@@ -56,12 +55,13 @@ func (o *Output) MergeIn(other *Output) {
 	o.Immediate.MergeIn(other.Immediate)
 	o.Eventual.MergeIn(other.Eventual)
 }
-func (o *Output) Profit(market *Market) {
+func (o *Output) Profit(market *Market) *Profit {
 	return &Profit{o, market.Value(o.Immediate), market.Value(o.Eventual)}
 }
 
 type Update struct {
-	Profit *profit
+	Profit *Profit
+	OpportunityCost *Profit
 	Time time.Duration
 }
 
